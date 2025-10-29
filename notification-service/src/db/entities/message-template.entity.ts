@@ -1,23 +1,25 @@
-import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
+
+export type MessageChannel = 'sms' | 'whatsapp';
 
 @Entity({ name: 'message_templates' })
+@Index(['name'], { unique: true })
 export class MessageTemplate {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
-  @Index({ unique: true })
-  @Column({ length: 120 })
-  name: string; // login-sms | transaction-sms
+  @Column({ length: 80 })
+  name!: string;                    // p.ej. 'transaction-sms' | 'otp-sms' | 'otp-whatsapp'
+
+  @Column({ type: 'varchar', length: 16 })
+  channel!: MessageChannel;         // 'sms' | 'whatsapp'
 
   @Column({ type: 'text' })
-  body: string; // placeholders
-
-  @Column({ length: 20 })
-  channel: string; // sms | whatsapp
+  body!: string;                    // permite {{placeholders}}
 
   @CreateDateColumn({ type: 'timestamptz' })
-  created_at: Date;
+  created_at!: Date;
 
   @UpdateDateColumn({ type: 'timestamptz' })
-  updated_at: Date;
+  updated_at!: Date;
 }

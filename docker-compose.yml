@@ -73,6 +73,7 @@ services:
       POSTGRES_DB: notifications_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+      API_KEY: "test123456789quitoec"
     volumes:
       - notifications_data:/var/lib/postgresql/data
 
@@ -119,13 +120,17 @@ services:
     ports:
       - "3003:3000"
     environment:
-      KAFKA_BROKER: kafka:9092
-      DATABASE_HOST: postgres_mail
+      API_KEY: "test123456789quitoec"
+      KAFKA_BROKER: "kafka:9092"
+      DATABASE_HOST: "postgres_mail"
       DATABASE_PORT: "5432"
-      DATABASE_USER: postgres
-      DATABASE_PASSWORD: postgres
-      DATABASE_NAME: mail_db
+      DATABASE_USER: "postgres"
+      DATABASE_PASSWORD: "postgres"
+      DATABASE_NAME: "mail_db"
       DEFAULT_FROM: "no-reply@example.com"
+      ENABLE_SMTP: "true"      # <-- clave
+      SMTP_HOST: "mailpit"     # <-- host por nombre del servicio
+      SMTP_PORT: "1025"
 
   notification-service:
     build: ./notification-service
@@ -143,8 +148,12 @@ services:
       DATABASE_PASSWORD: postgres
       DATABASE_NAME: notifications_db
       
- 
-   
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
 
 volumes:
   auth_data:

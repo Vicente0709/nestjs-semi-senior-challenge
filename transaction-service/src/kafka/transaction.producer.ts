@@ -1,7 +1,8 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { Kafka, Producer } from 'kafkajs';
+import { randomUUID } from 'crypto';
 
-type EventType = 'DEPOSIT' | 'WITHDRAWAL';
+type EventType = 'DEPOSIT' | 'DEBIT';
 
 @Injectable()
 export class TransactionProducer implements OnModuleInit, OnModuleDestroy {
@@ -24,9 +25,9 @@ export class TransactionProducer implements OnModuleInit, OnModuleDestroy {
 
     // Publica una transacción cada 5 segundos
     this.timer = setInterval(() => {
-      this.publishTransactionEvent().catch((err) => {
-        this.logger.error(`Failed to publish transaction event`, err.stack || err.message);
-      });
+      this.publishTransactionEvent().catch((err) =>
+        this.logger.error(`Failed to publish transaction event`, err.stack || err.message),
+      );
     }, 5000);
   }
 
@@ -42,9 +43,9 @@ export class TransactionProducer implements OnModuleInit, OnModuleDestroy {
   }
 
   private buildEvent() {
-    const type: EventType = Math.random() > 0.5 ? 'DEPOSIT' : 'WITHDRAWAL';
-    const account = `ACC-${Math.floor(Math.random() * 900000 + 100000)}`; // ACC-###### aleatorio
-    const amount = Number((Math.random() * 500 + 10).toFixed(2)); // 10.00 - 510.00
+    const type: EventType = Math.random() > 0.5 ? 'DEPOSIT' : 'DEBIT';
+    const account = `ACC-${Math.floor(Math.random() * 900000 + 100000)}`;
+    const amount = Number((Math.random() * 500 + 10).toFixed(2));
 
     return {
       event: type,
@@ -53,6 +54,7 @@ export class TransactionProducer implements OnModuleInit, OnModuleDestroy {
       amount,
       currency: 'USD',
       ts: new Date().toISOString(),
+      traceId: randomUUID(),
       source: 'transaction-service',
     };
   }
@@ -66,12 +68,19 @@ export class TransactionProducer implements OnModuleInit, OnModuleDestroy {
       topic: this.topic,
       messages: [
         {
-          key: evt.account,               // afinidad por partición
+          key: evt.account,
           value: JSON.stringify(evt),
+          headers: {
+            'x-event-type': evt.event,
+            'x-trace-id': evt.traceId,
+            'x-source': evt.source,
+          },
         },
       ],
     });
 
-    this.logger.log(`Published ${evt.event} ${evt.amount} ${evt.currency} for ${evt.account}`);
+    this.logger.log(
+      `Published ${evt.event} ${evt.amount} ${evt.currency} for ${evt.account} (traceId=${evt.traceId})`,
+    );
   }
 }

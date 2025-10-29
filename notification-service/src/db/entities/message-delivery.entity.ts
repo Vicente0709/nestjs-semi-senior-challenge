@@ -1,33 +1,30 @@
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { MessageTemplate } from './message-template.entity';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+
+export type DeliveryStatus = 'QUEUED' | 'SENT' | 'FAILED';
 
 @Entity({ name: 'message_deliveries' })
 export class MessageDelivery {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
-  @ManyToOne(() => MessageTemplate, { eager: true })
-  @JoinColumn({ name: 'template_id' })
-  template: MessageTemplate;
+  @Column()
+  template_id!: string;             // FK lógica
 
-  @Column({ type: 'uuid' })
-  template_id: string;
-
-  @Column({ length: 60 })
-  recipient: string;
+  @Column({ length: 64 })
+  recipient!: string;               // sms:+593... | whatsapp:+593...
 
   @Column({ type: 'jsonb' })
-  payload: any;
+  payload!: any;
 
-  @Column({ length: 20, default: 'QUEUED' })
-  status: 'QUEUED' | 'SENT' | 'FAILED';
-
-  @Column({ type: 'text', nullable: true })
-  error: string | null;
-
-  @CreateDateColumn({ type: 'timestamptz' })
-  created_at: Date;
+  @Column({ type: 'varchar', length: 10 })
+  status!: DeliveryStatus;
 
   @Column({ type: 'timestamptz', nullable: true })
-  sent_at: Date | null;
+  sent_at!: Date | null;
+
+  @Column({ type: 'text', nullable: true })
+  error!: string | null;
+
+  @CreateDateColumn({ type: 'timestamptz' })
+  created_at!: Date;
 }
