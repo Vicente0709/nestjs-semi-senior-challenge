@@ -1,0 +1,153 @@
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.1
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: "2181"
+      ZOOKEEPER_TICK_TIME: "2000"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.1
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092" # listener interno (contenedores)
+      - "29092:29092" # listener para el host
+    environment:
+      KAFKA_BROKER_ID: "1"
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+
+      # listeners: interno (contenedores) y externo (host)
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+
+  postgres_auth:
+    image: postgres:15
+    container_name: postgres_auth
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - auth_data:/var/lib/postgresql/data
+
+  postgres_transactions:
+    image: postgres:15
+    container_name: postgres_transactions
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_DB: transactions_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - transactions_data:/var/lib/postgresql/data
+
+  postgres_mail:
+    image: postgres:15
+    container_name: postgres_mail
+    ports:
+      - "5435:5432"
+    environment:
+      POSTGRES_DB: mail_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - mail_data:/var/lib/postgresql/data
+
+  postgres_notifications:
+    image: postgres:15
+    container_name: postgres_notifications
+    ports:
+      - "5436:5432"
+    environment:
+      POSTGRES_DB: notifications_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - notifications_data:/var/lib/postgresql/data
+
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    depends_on:
+      - kafka
+      - postgres_auth
+    ports:
+      - "3001:3000"
+    environment:
+      KAFKA_BROKER: kafka:9092
+      DATABASE_HOST: postgres_auth
+      DATABASE_PORT: "5432"
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+      DATABASE_NAME: auth_db
+      AUTH_TOPIC: auth
+
+  transaction-service:
+    build: ./transaction-service
+    container_name: transaction-service
+    depends_on:
+      - kafka
+      - postgres_transactions
+    ports:
+      - "3002:3000"
+    environment:
+      KAFKA_BROKER: kafka:9092
+      DATABASE_HOST: postgres_transactions
+      DATABASE_PORT: "5432"
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+      DATABASE_NAME: transactions_db
+      TRANSACTIONS_TOPIC: transactions
+
+  mail-service:
+    build: ./mail-service
+    container_name: mail-service
+    depends_on:
+      - kafka
+      - postgres_mail
+    ports:
+      - "3003:3000"
+    environment:
+      KAFKA_BROKER: kafka:9092
+      DATABASE_HOST: postgres_mail
+      DATABASE_PORT: "5432"
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+      DATABASE_NAME: mail_db
+      DEFAULT_FROM: "no-reply@example.com"
+
+  notification-service:
+    build: ./notification-service
+    container_name: notification-service
+    depends_on:
+      - kafka
+      - postgres_notifications
+    ports:
+      - "3004:3000"
+    environment:
+      KAFKA_BROKER: kafka:9092
+      DATABASE_HOST: postgres_notifications
+      DATABASE_PORT: "5432"
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+      DATABASE_NAME: notifications_db
+      
+ 
+   
+
+volumes:
+  auth_data:
+  transactions_data:
+  mail_data:
+  notifications_data:
